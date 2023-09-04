@@ -27,21 +27,23 @@ typedef int Qty;	//!< Order Quantity
 typedef int Price;	//!< Order Pricing
 typedef int Epoch;	//!< Order Epoch
 typedef char Side;	//!< Side 'B' or 'S' 
+typedef char Type;	//!< Order Type (MARKET or LIMIT)
 
 // Order side mapping to (0,1) which simplies indexing of buy/sell book
 constexpr Side BUY = 0;
 constexpr Side SELL = 1;
 
+// Order types
+constexpr Type MARKET = 'M';
+constexpr Type LIMIT = 'L';
+
 // Initial history size as elements in memory
-// Note: The history buffer is implemented as std::vector
-//       using the order-id as index.
-// FIXME: Specs calling for tuple (user_id, user_order_id) as key
 constexpr size_t kHistorySize = 1000;
 
 // Defines an order
 // Note: The comparison operators define price as primary key,
 //       and epoch as secondary key
-struct Order
+struct Order final
 {
 	Order()
 		: user_id(0), user_order_id(0), price(0), epoch(0), qty(0)
@@ -84,7 +86,8 @@ struct Order
 
 	friend std::ostream& operator<<(std::ostream& os, const Order& order)
 	{
-		//os << "#" << order.id << ": $" << order.price << " @" << order.epoch << " x" << order.qty;
+		os << "(" << order.user_id << "," << order.user_order_id << 
+			"): $" << order.price << " x" << order.qty;
 		return os;
 	}
 	// Order members
@@ -98,7 +101,7 @@ struct Order
 
 // Order Comparison Functor
 template <typename T = Order>
-struct OrderComparator
+struct OrderComparator final
 {
 	typedef std::function<bool(const T& lhs, const T& rhs)> Handler;
 
@@ -132,7 +135,7 @@ struct OrderComparator
 	Handler handler;
 };
 
-struct UserOrder
+struct UserOrder final
 {
 	Uid user_id;
 	Uid user_order_id;
@@ -141,18 +144,25 @@ struct UserOrder
 	{
 		return user_id == rhs.user_id && user_order_id == rhs.user_order_id;
 	}
-	size_t operator()(const UserOrder & order) const
+};
+
+template<>
+struct std::hash<UserOrder> final
+{
+	size_t operator()(const UserOrder& order) const
 	{
 		// simple hashfunction for 32-bit values which 
 		// should be sufficient for this exercise
-		return static_cast<size_t>(order.user_id) << 32 | static_cast<size_t>(order.user_order_id);
+		return
+			static_cast<size_t>(order.user_id) << 32 |
+			static_cast<size_t>(order.user_order_id);
 	}
 };
 
 // History Record
-struct Record
+struct Record final
 {
-	Record() = default;
+	Record() = delete;
 	Side side = 0;
 	Order order;
 };
@@ -169,28 +179,53 @@ struct SellStorage : Storage
 // Forward storage iteration
 std::ostream& operator<<(std::ostream& os, const BuyStorage& storage)
 {
+	os << " BUY" << std::endl;
 	if (!storage.size())
-		os << "--EMPTY--" << std::endl;
+		os << "  --EMPTY--" << std::endl;
 	for (auto& order : storage)
-		os << order << std::endl;
+		os << "   " << order << std::endl;
 	return os;
 }
 
 // Reverse storage iteration
 std::ostream& operator<<(std::ostream& os, const SellStorage& storage)
 {
+	os << " SELL" << std::endl;
 	if (!storage.size())
-		os << "--EMPTY--" << std::endl;
+		os << "  --EMPTY--" << std::endl;
 	for (auto it = storage.rbegin(); it != storage.rend(); ++it)
-		os << (*it) << std::endl;
+		os << "   " << (*it) << std::endl;
 	return os;
 }
 
+#include <queue>
+// Publisher
+struct Publisher final
+{
+	void queue(std::string&& msg)
+	{
+		messages.emplace(std::forward<std::string>(msg));
+		process();
+	}
+
+	void process()
+	{
+		while (!messages.empty())
+		{
+			std::string msg = messages.front();
+			std::cout << msg << std::endl;
+			messages.pop();
+		}
+	}
+	std::queue<std::string> messages;
+};
+
 // Defines an order book
-class OrderBook
+class OrderBook final
 {
 public:
 	typedef OrderComparator<Order> Comparator;
+	std::string symbol;
 	OrderBook(const std::string symbol, size_t history_size = kHistorySize)
 		: symbol(symbol)
 	{
@@ -201,23 +236,25 @@ public:
 
 	void add_order(Side side, Order&& order)
 	{
+		char buf[128];
+		snprintf(buf, sizeof(buf), "A: %d, %d", order.user_id, order.user_order_id);
+		publisher.queue(buf);
 		order.epoch = ++uid; // add "timestamp" (FIFO) for price>time ordering
 		history.emplace(std::forward<std::pair<UserOrder, Record>>(std::pair<UserOrder, Record>(
 			std::forward<UserOrder>(UserOrder({order.user_id, order.user_order_id})), 
 			std::forward<Record>(Record({side, order})))));
-
+		
 		// Find matching orders, handling MARKET and LIMIT orders
 		if (!match_order(side, order))
 		{
-			if (order.price > 0) // Place LIMIT order in book
-			{
-				books[side].emplace(std::forward<Order>(order));
-			}
+			assert(order.price != 0); // Place only LIMIT orders in book
+			books[side].emplace(std::forward<Order>(order));
 		}
 	}
 
 	bool cancel_order(UserOrder&& lhs_user_order)
 	{
+		// find order in history
 		History::iterator _it = history.find(lhs_user_order);
 		if (_it == history.end())
 		{
@@ -228,7 +265,8 @@ public:
 		Storage& storage = books[record.side];
 		auto& rhs = record.order;
 		assert(lhs_user_order == rhs_user_order);
-		// iterate over order (primary,secondary) key (price,time)
+
+		// iterate over LIMIT orders (primary,secondary) key (price,time)
 		Storage::iterator it = storage.find(rhs);
 		while (it != storage.end())
 		{
@@ -236,6 +274,7 @@ public:
 			if (lhs.user_id == rhs.user_id &&
 				lhs.user_order_id == rhs.user_order_id)
 			{
+				// delete from book
 				storage.erase(it);
 				return true;
 			}
@@ -257,12 +296,24 @@ public:
 		uid = 0;
 	}
 
+	// Print book
+	friend std::ostream& operator << (std::ostream& os, const OrderBook& book)
+	{
+		os << book.symbol << std::endl;
+		os << static_cast<SellStorage&>(book.asks);
+		os << static_cast<BuyStorage&>(book.bids);
+		return os;
+	}
 private:
 	bool match_order(Side side, Order& lhs)
 	{
 		// side specialization
 		auto& cmp = comparator[side];
 		auto& rhs_book = books[side ^ 1];
+#if VERBOSE
+		std::cout << (*this);
+#endif
+		Type type = (lhs.price != 0) ? LIMIT : MARKET;
 
 		// init iterator range for erase 
 		Storage::iterator rb(rhs_book.end());
@@ -274,8 +325,16 @@ private:
 		while (it != rhs_book.end())
 		{
 			Order& rhs = const_cast<Order&>(*it);
+			if (!lhs.price)
+			{
+				// For MARKET price set to first entry
+				lhs.price = rhs.price;
+			}
 			if (cmp(lhs, rhs))
 			{
+#if VERBOSE
+				std::cout << (type==LIMIT ? "LIMIT" : "MARKET") << " Match : " << lhs << " with " << rhs << std::endl;
+#endif
 				Qty qty = (lhs.qty <= rhs.qty) ? lhs.qty : rhs.qty;
 				lhs.qty -= qty;
 				rhs.qty -= qty;
@@ -309,15 +368,17 @@ private:
 		{
 			rhs_book.erase(rb, re);
 		}
-		// return whether this incoming entry was completely satisfied
-		return !lhs.qty;
+		// return True whether this incoming order was MARKET
+		// or a LIMIT order completely satisfied
+		return (type != LIMIT) || !lhs.qty;
 	}
+
 	// Book storage
 	std::array<Storage, 2> books = {
 		Storage(Comparator(Comparator::greater)),
 		Storage(Comparator(Comparator::less)),
 	};
-	// Set comparison functor
+	// Set comparison functors
 	std::array<OrderComparator<Order>, 2> comparator = {
 		Comparator(Comparator::greater_equal),
 		Comparator(Comparator::less_equal),
@@ -326,7 +387,7 @@ private:
 	Storage& asks = books[1];
 	History history;
 	Uid uid = 0;
-	std::string symbol;
+	Publisher publisher;
 };
 
 // Return the elapsed time in specified resolution
@@ -392,7 +453,7 @@ private:
 	std::ifstream handle;
 };
 
-
+// Orderbook manager
 struct OrderBookManager final
 {
 	~OrderBookManager()
@@ -466,6 +527,10 @@ public:
 					return false;
 				}
 				pos++;
+#if VERBOSE
+				std::cout << "F: " << active_book->symbol << std::endl;
+#endif
+				std::cout << (*active_book);
 				active_book->flush();
 				return pos >= size;
 			}
@@ -480,6 +545,11 @@ public:
 				Side side = (tokenize(str, pos, size)[0] == 'B') ? BUY : SELL;
 				order.user_order_id = static_cast<Uid>(std::stoi(tokenize(str, pos, size)));
 				active_book = manager(symbol);
+#if VERBOSE
+				std::cout << "N: " << order.user_id << ", " << symbol << ", " <<
+					order.price << ", " << order.qty << ", " << (side == BUY ? 'B' : 'S') <<
+					", " << order.user_order_id << std::endl;
+#endif
 				active_book->add_order(side, std::forward<Order>(order));
 				return pos >= size;
 			}
@@ -493,6 +563,10 @@ public:
 				UserOrder user_order;
 				user_order.user_id = static_cast<Uid>(std::stoi(tokenize(str, pos, size)));
 				user_order.user_order_id = static_cast<Uid>(std::stoi(tokenize(str, pos, size)));
+#if VERBOSE
+				std::cout << "C: " << user_order.user_id << ", " <<
+					user_order.user_order_id << std::endl;
+#endif
 				active_book->cancel_order(std::forward<UserOrder>(user_order));
 				return pos >= size;
 			}
@@ -516,34 +590,30 @@ public:
 	UnitTests(const std::string& file_path)
 		: book_manager()
 		, file_streamer(file_path.c_str())
-		, scenario()
 		, scenario_count(0)
-		, current_book()
 		, parser(book_manager)
 	{
 		assert(file_streamer.file_exists());
-		scenario.reserve(32);
 	}
 	bool run()
 	{
-		scenario_count = 0;
-		current_book.clear();
-		scenario.clear();
-		book_manager.clear();
-
+		scenario_count = 0;	
+		std::cout << "Scenario #1" << std::endl;
 		auto result = file_streamer.process([this](std::string&& data) -> bool {
+			if (data[0] == 'F')
+			{
+				scenario_count++;
+				std::cout << "\nScenario #" << scenario_count << std::endl;
+			}
 			auto result = parser.parse(data.c_str(), data.size());
 			return true;
 			});
-
 		std::cout << "Scenarios processed: " << scenario_count << std::endl;
 		return result;
 	}
 	OrderBookManager book_manager;
 	FileStreamer file_streamer;
-	std::vector<std::string> scenario;
 	uint32_t scenario_count;
-	std::string current_book;
 	ProtocolParser<64> parser;
 };
 
