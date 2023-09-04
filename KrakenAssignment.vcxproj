@@ -127,10 +127,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="KrakenAssignment.cpp" />
+    <ClCompile Include="client.cpp" />
+    <ClCompile Include="logpub.h" />
+    <ClCompile Include="server.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="input_trimmed.csv" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="client.h" />
+    <ClInclude Include="filestream.h" />
+    <ClInclude Include="history.h" />
+    <ClInclude Include="order.h" />
+    <ClInclude Include="orderbook.h" />
+    <ClInclude Include="proto.h" />
+    <ClInclude Include="server.h" />
+    <ClInclude Include="test.h" />
+    <ClInclude Include="tob.h" />
+    <ClInclude Include="types.h" />
+    <ClInclude Include="user.h" />
+    <ClInclude Include="util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
