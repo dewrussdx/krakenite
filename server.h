@@ -5,6 +5,8 @@
 #include <vector>
 #if _WIN32
 #include <winsock2.h>
+#else
+#include <sys/socket.h>
 #endif
 #include "netio.h"
 
