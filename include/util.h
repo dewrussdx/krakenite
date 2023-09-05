@@ -34,8 +34,8 @@ struct StopWatch
 
 private:
 	// std::cout << << "ns\n";
-	std::chrono::time_point<std::chrono::steady_clock> _start;
-	std::chrono::time_point<std::chrono::steady_clock> _finish;
+	std::chrono::time_point<std::chrono::high_resolution_clock> _start;
+	std::chrono::time_point<std::chrono::high_resolution_clock> _finish;
 };
 
 #endif
