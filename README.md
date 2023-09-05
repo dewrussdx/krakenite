@@ -22,7 +22,7 @@ Take-home program test - README
 	- ```./krakenite --client```: Run the UDP stream client
 
 3. A dockerfile setting up the environment and building the binary is included
-in this package. Use `docker build .` and then run the container through `docker run -ti <container_id>`.
+in this package. Use `docker build .` and then run the container through `docker run -ti <image_id>`.
 The executable (`krakenite`) is located in the `/root/build` directory
 
 
