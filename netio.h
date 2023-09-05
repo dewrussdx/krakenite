@@ -5,12 +5,17 @@
 
 typedef char Pad;
 
+/// <summary>
+/// Network protocol buffers
+/// Note: This isn't production ready,
+///       UDP is ... unreliable.
+/// </summary>
 struct NetIO
 {
-
 	struct Handshake
 	{
 		char id = 'H';
+		Pad pad[3] = { 0 };
 	};
 
 #pragma pack( push, 1 )
@@ -39,6 +44,7 @@ struct NetIO
 		char id = 'C';
 		Uid user_id = 0;
 		Uid user_order_id = 0;
+		Pad pad[3] = { 0 };
 	};
 #pragma pack( pop )
 
@@ -46,6 +52,7 @@ struct NetIO
 	struct FlushBook : Base
 	{
 		char id = 'F';
+		Pad pad[3] = { 0 };
 	};
 #pragma pack (pop)
 

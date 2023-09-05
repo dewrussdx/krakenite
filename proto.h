@@ -27,6 +27,7 @@ public:
 		size_t pos = 0;
 		switch (str[pos++])
 		{
+
 		case 'F':
 		{
 			pos++;
@@ -35,6 +36,8 @@ public:
 			assert(pos >= size);
 			_callback.flush_book(data);
 		}
+		break;
+
 		case 'N':
 		{
 			pos++;
@@ -44,11 +47,13 @@ public:
 			strncpy_s(& data.symbol[0], sizeof(data.symbol), _tokenize(str, pos, size), sizeof(data.symbol));
 			data.price = static_cast<Price>(std::stoi(_tokenize(str, pos, size)));
 			data.qty = static_cast<Qty>(std::stoi(_tokenize(str, pos, size)));
-			data.user_order_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
 			data.side = _tokenize(str, pos, size)[0];
+			data.user_order_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
 			assert(pos >= size);
 			_callback.new_order(data);
 		}
+		break;
+
 		case 'C':
 		{
 			pos++;
@@ -59,10 +64,14 @@ public:
 			assert(pos >= size);
 			_callback.cancel_order(data);
 		}
+		break;
+
 		default:
 		{
 			_callback.protocol_error();
 		}
+		break;
+
 		}
 	}
 

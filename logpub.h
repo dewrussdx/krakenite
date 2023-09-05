@@ -6,6 +6,7 @@
 #include <queue>
 #include <iostream>
 #include <cassert>
+#include <cstdarg>
 
 #include "order.h"
 #include "user.h"
@@ -65,7 +66,17 @@ public:
 		const std::lock_guard<std::mutex> lock(mutex);
 		messages.emplace(std::forward<std::string>(std::string(buffer)));
 	}
-
+	
+	void queue(const char* format, ...)
+	{
+		va_list args;
+		va_start(args, format);
+		auto textSize = vsnprintf(buffer, sizeof(buffer), format, args);
+		va_end(args);
+		const std::lock_guard<std::mutex> lock(mutex);
+		messages.emplace(std::forward<std::string>(std::string(buffer)));
+	}
+	
 	void process()
 	{
 		while (!quit)
@@ -90,4 +101,5 @@ private:
 	std::thread thread;
 };
 
+static LogPub g_logpub;
 #endif

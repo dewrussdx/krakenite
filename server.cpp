@@ -1,7 +1,6 @@
 #if _WIN32
 #include <ws2tcpip.h>
 #pragma comment(lib,"ws2_32.lib") // Winsock Library
-//#pragma warning(disable:4996) 
 #endif
 
 #include "server.h"
@@ -14,12 +13,17 @@ Server::Server(unsigned short port)
     , _server({ 0 })
     , _client({ 0 })
 {
+    _protobufs.reserve(64);
 }
 
 Server::~Server()
 {
     closesocket(_socket);
     WSACleanup();
+    for (auto& pbuf : _protobufs)
+    {
+        delete pbuf;
+    }
 }
 
 bool Server::init()
@@ -56,23 +60,36 @@ bool Server::init()
 
 struct Callback : public ProtocolParser::Callback
 {
-    virtual void new_order(const NetIO::NewOrder&)
+    Callback(Server& server)
+        : _server(server)
     {
     }
-    virtual void cancel_order(const NetIO::CancelOrder&)
+    virtual void new_order(const NetIO::NewOrder& data)
     {
+       _server.add_protobuf(new NetIO::NewOrder(data));
     }
-    virtual void flush_book(const NetIO::FlushBook&)
+
+    virtual void cancel_order(const NetIO::CancelOrder& data)
     {
+        _server.add_protobuf(new NetIO::CancelOrder(data));
+    }
+    
+    virtual void flush_book(const NetIO::FlushBook& data)
+    {
+        _server.add_protobuf(new NetIO::FlushBook(data));
     }
     virtual void protocol_error()
     {
+        std::cout << "ERROR: Protocol error (while parsing .csv file)" << std::endl;
+        // TODO: _server.panic()
     }
+private:
+    Server& _server;
 };
 
 bool Server::_read_csv(const char* path)
 {
-    Callback callback;
+    Callback callback(*this);
     FileStreamer streamer(path);
     ProtocolParser parser;
 
@@ -86,6 +103,14 @@ bool Server::_read_csv(const char* path)
 
 bool Server::run()
 {
+    std::cout << "sizeof():" << std::endl;
+    std::cout << "- HandShake: " << sizeof(NetIO::Handshake) << std::endl;
+    std::cout << "- NewOrder: " << sizeof(NetIO::NewOrder) << std::endl;
+    std::cout << "- CancelOrder: " << sizeof(NetIO::CancelOrder) << std::endl;
+    std::cout << "- FlushBook: " << sizeof(NetIO::FlushBook) << std::endl;
+
+    _read_csv("input_trimmed.csv");
+
     char client_addr[64] = { 0 };
     char buffer[1024] = { 0 };
     while (true)
@@ -100,21 +125,37 @@ bool Server::run()
             std::cout << "ERROR: recvfrom() failed: " << WSAGetLastError() << std::endl;
             return false;
         }
+        assert(msg_size == sizeof(NetIO::Handshake));
 
         // print details of the client/peer and the data received
         inet_ntop(AF_INET, &_client.sin_addr, client_addr, sizeof(client_addr));
-        std::cout << "recvfrom(): " << msg_size << " bytes " << client_addr
-            << ":" << _client.sin_port << std::endl;
-        std::cout << buffer << std::endl;
-
-#if 0 // TODO: Loop send data
-        // reply the client with 2the same data
-        if (sendto(_socket, message, strlen(message), 0, (sockaddr*)&client, sizeof(sockaddr_in)) == SOCKET_ERROR)
+        std::cout << "Handshake from " << client_addr << ":" << _client.sin_port << std::endl;
+       
+        for (auto i = 0; i < 1; i++)
         {
-            printf("sendto() failed with error code: %d", WSAGetLastError());
-            return 3;
+            for (NetIO::Base* pbuf : _protobufs)
+            {
+                int size = 0;
+                switch (reinterpret_cast<const char*>(pbuf)[0])
+                {
+                case 'N':
+                    size = sizeof(NetIO::NewOrder);
+                    break;
+                case 'C':
+                    size = sizeof(NetIO::CancelOrder);
+                    break;
+                case 'F':
+                    size = sizeof(NetIO::FlushBook);
+                    break;
+                }
+                assert(size > 0 && !(size & 3));
+                if (sendto(_socket, reinterpret_cast<const char*>(pbuf), size, 0,
+                    (sockaddr*)&_client, sizeof(sockaddr_in)) == SOCKET_ERROR)
+                {
+                    std::cout << "ERROR: sendto() failed: " << WSAGetLastError() << std::endl;
+                }
+            }
         }
-#endif
-
     }
+    return true;
 }

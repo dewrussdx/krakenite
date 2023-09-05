@@ -46,9 +46,8 @@ class OrderBook final
 public:
 	std::string symbol;
 	typedef OrderComparator<Order> Comparator;
-	OrderBook(const std::string& symbol, LogPub& logpub, size_t history_size = kHistorySize)
+	OrderBook(const std::string& symbol, size_t history_size = kHistorySize)
 		: symbol(symbol)
-		, logpub(logpub)
 	{
 		history.reserve(history_size);
 	}
@@ -57,7 +56,7 @@ public:
 
 	void add_order(Side side, Order&& order)
 	{
-		logpub.queue_new_order(order);
+		g_logpub.queue_new_order(order);
 
 		order.epoch = ++uid; // add "timestamp" (FIFO) for price>time ordering
 		history.emplace(std::forward<std::pair<UserOrder, Record>>(std::pair<UserOrder, Record>(
@@ -74,7 +73,7 @@ public:
 			if (order.price == tob.price)
 			{
 				tob.qty += order.qty;
-				logpub.queue_tob_changes(side, tob);
+				g_logpub.queue_tob_changes(side, tob);
 			}
 			else
 			{
@@ -83,7 +82,7 @@ public:
 				{
 					tob.price = order.price;
 					tob.qty = order.qty;
-					logpub.queue_tob_changes(side, tob);
+					g_logpub.queue_tob_changes(side, tob);
 				}
 			}
 			books[side].emplace(std::forward<Order>(order));
@@ -129,7 +128,7 @@ public:
 				book.erase(it);
 
 				// publish
-				logpub.queue_cancel_order(lhs_user_order);
+				g_logpub.queue_cancel_order(lhs_user_order);
 
 				if (tob_change)
 				{
@@ -194,7 +193,7 @@ private:
 			tob.price = price;
 			tob.qty = qty;
 		}
-		logpub.queue_tob_changes(side, tob);
+		g_logpub.queue_tob_changes(side, tob);
 	}
 
 	bool _match_order(Side side, Order& lhs)
@@ -228,7 +227,7 @@ private:
 				rhs.qty -= qty;
 
 				// Publish trade
-				logpub.queue_trade(side, lhs, rhs, qty);
+				g_logpub.queue_trade(side, lhs, rhs, qty);
 
 				// Modify TOB
 				assert(rhs.price == tobs[oppo].price);
@@ -274,9 +273,6 @@ private:
 		// or a LIMIT order completely satisfied
 		return (type != LIMIT) || !lhs.qty;
 	}
-	// Publisher
-	LogPub& logpub;
-
 	// Book storage
 	std::array<Storage, 2> books = {
 		Storage(Comparator(Comparator::greater)),
@@ -309,7 +305,7 @@ struct OrderBookManager final
 		if (it == books.end())
 		{
 			auto ref = books.emplace(std::forward<std::pair<std::string, OrderBook*>>(
-				std::pair<std::string, OrderBook*>(name, new OrderBook(name, logpub))));
+				std::pair<std::string, OrderBook*>(name, new OrderBook(name))));
 			assert(ref.second);
 			it = ref.first;
 		}
@@ -327,7 +323,6 @@ struct OrderBookManager final
 		books.clear();
 	}
 	typedef std::unordered_map<std::string, OrderBook*> Books;
-	LogPub logpub;
 	Books books;
 };
 #endif
