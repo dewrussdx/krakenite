@@ -122,7 +122,7 @@ bool Server::run()
     std::cout << "- CancelOrder: " << sizeof(NetIO::CancelOrder) << std::endl;
     std::cout << "- FlushBook: " << sizeof(NetIO::FlushBook) << std::endl;
 
-    _read_csv("../input_trimmed.csv");
+    _read_csv("../etc/input.csv");
 
     char client_addr[64] = {0};
     char buffer[1024] = {0};
