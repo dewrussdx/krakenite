@@ -174,8 +174,15 @@ private:
 
 			// count new prices
 			// TODO: this is lame, but i'm running out of time
-			// IDEA: Add another hashmap mapping levels to count
-			//       and maintain at runtime
+			// FIXME: Change data structure of orderbook to following
+			//        unordered_map<Price, Level>
+			//        Add struct Level
+			//				- Qty total_qty;
+			//				- std::map<Epoch, _sort_direction> bids;
+			//				- std::map<Epoch, _sort_direction> asks;
+			//		  Maintain total_qty at all times for the level
+			//        => If ToB changes, and level changes, it's a simple lookup in the
+			//			 hashmap, to get the total_qty
 			for (auto it = book.begin(); it != book.end(); ++it)
 			{
 				if (!price)

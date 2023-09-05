@@ -1,6 +1,7 @@
 #ifndef _NETIO_H_
 #define _NETIO_H_
 
+#include <cstring>
 #include "types.h"
 
 // deal with platform differences
@@ -19,8 +20,7 @@ typedef char Pad;
 
 /// <summary>
 /// Network protocol buffers
-/// Note: This isn't production ready,
-///       UDP is ... unreliable.
+/// Quick and dirty implementation, just tested for happy path
 /// </summary>
 struct NetIO
 {
@@ -29,7 +29,11 @@ struct NetIO
 		char id = 'H';
 		Pad pad[3] = {0};
 	};
-
+	struct Ack
+	{
+		char id = '~';
+		Pad pad[3] = {0};
+	};
 #pragma pack(push, 1)
 	struct Base
 	{
@@ -68,7 +72,17 @@ struct NetIO
 	};
 #pragma pack(pop)
 
+	static void error(const char *msg)
+	{
+#if _WIN32
+		std::cout << "ERROR : " << msg << " : " << WSAGetLastError() << std::endl;
+#else
+		char *details = strerror(errno);
+		std::cout << "ERROR : " << msg << " : " << details << std::endl;
+#endif
+	}
 	NetIO::Handshake handshake;
+	NetIO::Handshake ack;
 };
 
 #endif

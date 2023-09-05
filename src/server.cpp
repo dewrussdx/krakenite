@@ -6,6 +6,7 @@
 #include "server.h"
 #include "filestream.h"
 #include "proto.h"
+#include "netio.h"
 
 Server::Server(unsigned short port)
     : _port(port), _socket(INVALID_SOCKET), _server({0}), _client({0})
@@ -41,12 +42,7 @@ bool Server::init()
     // create a socket
     if ((_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET)
     {
-#if _WIN32
-        std::cout << "ERROR: Unable to create socket: " << WSAGetLastError() << std::endl;
-#else
-        char *error_message = strerror(errno);
-        std::cout << "ERROR: Unable to create socket: " << error_message << std::endl;
-#endif
+        NetIO::error("socket() failed");
         return false;
     }
 
@@ -59,12 +55,7 @@ bool Server::init()
     // bind
     if (bind(_socket, (sockaddr *)&_server, sizeof(_server)) == SOCKET_ERROR)
     {
-#if _WIN32
-        std::cout << "ERROR: Bind failed: " << WSAGetLastError() << std::endl;
-#else
-        char *error_message = strerror(errno);
-        std::cout << "ERROR: Bind failed: " << error_message << std::endl;
-#endif
+        NetIO::error("bind() failed");
         return false;
     }
     return true;
@@ -116,16 +107,22 @@ bool Server::_read_csv(const char *path)
 
 bool Server::run()
 {
+#if VERBOSE
     std::cout << "sizeof():" << std::endl;
     std::cout << "- HandShake: " << sizeof(NetIO::Handshake) << std::endl;
     std::cout << "- NewOrder: " << sizeof(NetIO::NewOrder) << std::endl;
     std::cout << "- CancelOrder: " << sizeof(NetIO::CancelOrder) << std::endl;
     std::cout << "- FlushBook: " << sizeof(NetIO::FlushBook) << std::endl;
-
+#endif
     _read_csv("../etc/input.csv");
 
     char client_addr[64] = {0};
     char buffer[1024] = {0};
+#if PERF_TEST
+    size_t num_trials = _perf_num_trials;
+#else
+    size_t num_trials = 1;
+#endif
     while (true)
     {
         std::cout << "Waiting for client handshake..." << std::endl;
@@ -135,12 +132,7 @@ bool Server::run()
         socklen_t slen = sizeof(_client);
         if ((msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr *)&_client, &slen)) == SOCKET_ERROR)
         {
-#if _WIN32
-            std::cout << "ERROR: recvfrom() failed: " << WSAGetLastError() << std::endl;
-#else
-            char *error_message = strerror(errno);
-            std::cout << "ERROR: recvfrom() failed: " << error_message << std::endl;
-#endif
+            NetIO::error("recvfrom() failed");
             return false;
         }
         assert(msg_size == sizeof(NetIO::Handshake));
@@ -149,7 +141,7 @@ bool Server::run()
         inet_ntop(AF_INET, &_client.sin_addr, client_addr, sizeof(client_addr));
         std::cout << "Handshake from " << client_addr << ":" << _client.sin_port << std::endl;
 
-        for (auto i = 0; i < 1; i++)
+        for (auto i = 0; i < num_trials; i++)
         {
             for (NetIO::Base *pbuf : _protobufs)
             {
@@ -170,13 +162,16 @@ bool Server::run()
                 if (sendto(_socket, reinterpret_cast<const char *>(pbuf), size, 0,
                            (sockaddr *)&_client, sizeof(sockaddr_in)) == SOCKET_ERROR)
                 {
-#if _WIN32
-                    std::cout << "ERROR: sendto() failed: " << WSAGetLastError() << std::endl;
-#else
-                    char *error_message = strerror(errno);
-                    std::cout << "ERROR: sendto() failed: " << error_message << std::endl;
-#endif
+                    NetIO::error("sendto() failed");
                 }
+
+                // Wait for client 'ack'
+                if ((msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr *)&_client, &slen)) == SOCKET_ERROR)
+                {
+                    NetIO::error("recvfrom() failed");
+                    return false;
+                }
+                assert(msg_size == sizeof(NetIO::Ack));
             }
         }
     }

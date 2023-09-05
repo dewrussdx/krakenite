@@ -96,8 +96,10 @@ private:
 		{
 			_recording_buffer.push_back(message);
 		}
+#if !PERF_TEST
 		std::lock_guard<std::mutex> lock(_mutex);
 		_queue.emplace(std::forward<std::string>(message));
+#endif
 	}
 
 	void _process()

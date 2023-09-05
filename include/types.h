@@ -14,9 +14,16 @@
 #endif
 #endif
 
+// Enable performance testing
+#define PERF_TEST (0)
+#if PERF_TEST
+constexpr size_t _perf_num_trials = 100;       // 100 Trials
+constexpr size_t _perf_sample_per_trial = 106; // 106 samples per trial (input.csv)
+#endif
+
 // Custom types
 typedef int Uid;   //!< Order UID
-typedef int Qty;   //!< Order Quantity
+typedef int Qty;   //!< Order Qu_perf_sample_per_trialantity
 typedef int Price; //!< Order Pricing
 typedef int Epoch; //!< Order Epoch
 typedef char Side; //!< Side 'B' or 'S'
