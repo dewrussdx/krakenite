@@ -94,7 +94,7 @@ bool Client::run()
                     active_book = manager(data->symbol);
                 }
                 assert(active_book);
-                active_book->add_order(data->side == 'B' ? BUY : SELL, std::forward<Order>(
+                active_book->new_order(data->side == 'B' ? BUY : SELL, std::forward<Order>(
                     Order{ data->user_id, data->user_order_id, data->price, 0, data->qty }));
                 break;
             }

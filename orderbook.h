@@ -54,14 +54,15 @@ public:
 	OrderBook(const OrderBook& rhs) = delete;
 	OrderBook& operator=(const OrderBook& rhs) = delete;
 
-	void add_order(Side side, Order&& order)
+	void new_order(Side side, Order&& order)
 	{
-		LogPub::instance().queue_new_order(order);
-
 		order.epoch = ++uid; // add "timestamp" (FIFO) for price>time ordering
 		history.emplace(std::forward<std::pair<UserOrder, Record>>(std::pair<UserOrder, Record>(
 			std::forward<UserOrder>(UserOrder({ order.user_id, order.user_order_id })),
 			std::forward<Record>(Record({ side, order })))));
+
+		// Ack order received
+		LogPub::instance().queue_new_order(order);
 
 		// Find matching orders, handling MARKET and LIMIT orders
 		if (!_match_order(side, order))
@@ -87,9 +88,6 @@ public:
 			}
 			books[side].emplace(std::forward<Order>(order));
 		}
-#if VERBOSE
-		std::cout << (*this);
-#endif
 	}
 
 	bool cancel_order(UserOrder&& lhs_user_order)

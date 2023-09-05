@@ -10,16 +10,13 @@
 class UnitTests
 {
 public:
-	UnitTests(const std::string& file_path)
-		: streamer(file_path.c_str())
+	UnitTests()
 	{
-		assert(streamer.file_exists());
 	}
 
 	bool run();
 	
 private:
-	FileStreamer streamer;
 };
 
 #endif

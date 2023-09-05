@@ -13,7 +13,7 @@ int main(int argc, const char** argv)
 	const char* mode = (argc == 2) ? argv[1] : "--test";
 	if (!strcmp(mode, "--test"))
 	{
-		UnitTests tests("input_trimmed.csv");
+		UnitTests tests;
 		auto result = tests.run();
 		assert(result);
 	}

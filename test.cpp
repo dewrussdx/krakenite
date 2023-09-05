@@ -25,7 +25,7 @@ struct StreamHandler : public ProtocolParser::Callback
 		}
 		else
 		{
-			_active_book->add_order(data.side == 'B' ? BUY : SELL,std::forward<Order>(
+			_active_book->new_order(data.side == 'B' ? BUY : SELL,std::forward<Order>(
 				Order{ data.user_id,data.user_order_id,data.price,0,data.qty }));
 		}
 	}
