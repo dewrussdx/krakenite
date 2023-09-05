@@ -56,7 +56,7 @@ struct NetIO
 	};
 #pragma pack (pop)
 
-	const NetIO::Handshake handshake;
+	NetIO::Handshake handshake;
 };
 
 #endif

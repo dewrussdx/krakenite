@@ -7,7 +7,12 @@
 #if _WIN32
 #include <winsock2.h>
 #else
+typedef int SOCKET;
+#define SOCKET_ERROR (-1)
+#define INVALID_SOCKET (~0)
+#include <arpa/inet.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #endif
 #include "netio.h"
 
@@ -24,7 +29,7 @@ private:
     std::string _target;
     unsigned short _port;
     SOCKET _socket;
-    sockaddr_in _server;
+    struct sockaddr_in _server;
     NetIO _netio;
 };
 

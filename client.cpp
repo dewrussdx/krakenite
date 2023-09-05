@@ -17,8 +17,12 @@ Client::Client(const char* target, unsigned short port)
 }
 Client::~Client()
 {
+#if _WIN32
     closesocket(_socket);
     WSACleanup();
+#else
+    close(_socket);
+#endif
 }
 
 bool Client::init()
@@ -34,7 +38,12 @@ bool Client::init()
     // create socket
     if ((_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR)
     {
+#if _WIN32
         std::cout << "Unable to create socket: " << WSAGetLastError() << std::endl;
+#else
+        char *error_message = strerror(errno);
+        std::cout << "ERROR: Unable to create socket: " << error_message << std::endl;
+#endif
         return false;
     }
 
@@ -61,11 +70,16 @@ bool Client::run()
     if (sendto(_socket, reinterpret_cast<const char*>(&_netio.handshake), sizeof(NetIO::Handshake),
         0, (sockaddr*)&_server, sizeof(sockaddr_in)) == SOCKET_ERROR)
     {
+#if _WIN32
         std::cout << "sendto() failed: " << WSAGetLastError() << std::endl;
+#else
+        char *error_message = strerror(errno);
+        std::cout << "ERROR: Unable to create socket: " << error_message << std::endl;
+#endif
         return false;
     }
 
-    int slen = sizeof(sockaddr_in);
+    socklen_t slen = sizeof(sockaddr_in);
     int msg_size;
 
     int scenario = 1;
@@ -75,7 +89,12 @@ bool Client::run()
     {
         if ((msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr*)&_server, &slen)) == SOCKET_ERROR)
         {
+#if _WIN32
             std::cout << "recvfrom() failed: " << WSAGetLastError() << std::endl;
+#else
+        char *error_message = strerror(errno);
+        std::cout << "ERROR: Unable to create socket: " << error_message << std::endl;
+#endif
             return false;
         }
     

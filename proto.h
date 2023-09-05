@@ -44,7 +44,8 @@ public:
 			NetIO::NewOrder data;
 			data.id = 'N';
 			data.user_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
-			strncpy_s(& data.symbol[0], sizeof(data.symbol), _tokenize(str, pos, size), sizeof(data.symbol));
+			//strncpy_s(& data.symbol[0], sizeof(data.symbol), _tokenize(str, pos, size), sizeof(data.symbol));
+			strcpy(& data.symbol[0], _tokenize(str, pos, size));
 			data.price = static_cast<Price>(std::stoi(_tokenize(str, pos, size)));
 			data.qty = static_cast<Qty>(std::stoi(_tokenize(str, pos, size)));
 			data.side = _tokenize(str, pos, size)[0];

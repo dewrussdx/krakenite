@@ -18,13 +18,18 @@ Server::Server(unsigned short port)
 
 Server::~Server()
 {
+#if _WIN32
     closesocket(_socket);
     WSACleanup();
+#else
+    close(_socket);
+#endif
     for (auto& pbuf : _protobufs)
     {
         delete pbuf;
     }
 }
+
 
 bool Server::init()
 {
@@ -38,13 +43,19 @@ bool Server::init()
     }
 #endif
     // create a socket
-    if ((_socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
+    if ((_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET)
     {
+#if _WIN32
         std::cout << "ERROR: Unable to create socket: " << WSAGetLastError() << std::endl;
+#else
+        char *error_message = strerror(errno);
+        std::cout << "ERROR: Unable to create socket: " << error_message << std::endl;
+#endif
         return false;
     }
 
     // prepare the sockaddr_in structure
+    memset((char *) &_server, 0, sizeof(_server));
     _server.sin_family = AF_INET;
     _server.sin_addr.s_addr = INADDR_ANY;
     _server.sin_port = htons(_port);
@@ -52,7 +63,12 @@ bool Server::init()
     // bind
     if (bind(_socket, (sockaddr*)&_server, sizeof(_server)) == SOCKET_ERROR)
     {
+#if _WIN32
         std::cout << "ERROR: Bind failed: " << WSAGetLastError() << std::endl;
+#else
+        char *error_message = strerror(errno);
+        std::cout << "ERROR: Bind failed: " << error_message << std::endl;
+#endif
         return false;
     }
     return true;
@@ -109,7 +125,7 @@ bool Server::run()
     std::cout << "- CancelOrder: " << sizeof(NetIO::CancelOrder) << std::endl;
     std::cout << "- FlushBook: " << sizeof(NetIO::FlushBook) << std::endl;
 
-    _read_csv("input_trimmed.csv");
+    _read_csv("../input_trimmed.csv");
 
     char client_addr[64] = { 0 };
     char buffer[1024] = { 0 };
@@ -119,10 +135,15 @@ bool Server::run()
 
         // try to receive some data, this is a blocking call
         int msg_size;
-        int slen = sizeof(sockaddr_in);
+        socklen_t slen = sizeof(_client);
         if ((msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr*)&_client, &slen)) == SOCKET_ERROR)
         {
+#if _WIN32
             std::cout << "ERROR: recvfrom() failed: " << WSAGetLastError() << std::endl;
+#else
+            char *error_message = strerror(errno);
+            std::cout << "ERROR: recvfrom() failed: " << error_message << std::endl;
+#endif
             return false;
         }
         assert(msg_size == sizeof(NetIO::Handshake));
@@ -152,7 +173,12 @@ bool Server::run()
                 if (sendto(_socket, reinterpret_cast<const char*>(pbuf), size, 0,
                     (sockaddr*)&_client, sizeof(sockaddr_in)) == SOCKET_ERROR)
                 {
+#if _WIN32
                     std::cout << "ERROR: sendto() failed: " << WSAGetLastError() << std::endl;
+#else
+                    char *error_message = strerror(errno);
+                    std::cout << "ERROR: sendto() failed: " << error_message << std::endl;
+#endif
                 }
             }
         }
