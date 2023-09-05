@@ -25,6 +25,7 @@ public:
 	{
 		quit = true;
 		thread.join();
+		_flush_queue();
 	}
 	void queue_new_order(const Order& data)
 	{
@@ -69,15 +70,19 @@ public:
 	{
 		while (!quit)
 		{
-			const std::lock_guard<std::mutex> lock(mutex);
-			while (!messages.empty())
-			{
-				std::cout << messages.front() << std::endl;
-				messages.pop();
-			}
+			_flush_queue();
 		}
 	}
 private:
+	void _flush_queue()
+	{
+		const std::lock_guard<std::mutex> lock(mutex);
+		while (!messages.empty())
+		{
+			std::cout << messages.front() << std::endl;
+			messages.pop();
+		}
+	}
 	char buffer[_buffer_size] = { 0 };
 	std::atomic<bool> quit;
 	std::queue<std::string> messages;

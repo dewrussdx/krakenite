@@ -19,7 +19,7 @@ struct SellStorage : Storage
 };
 
 // Forward storage iteration
-std::ostream& operator<<(std::ostream& os, const BuyStorage& storage)
+static std::ostream& operator<<(std::ostream& os, const BuyStorage& storage)
 {
 	os << " BUY" << std::endl;
 	if (!storage.size())
@@ -30,7 +30,7 @@ std::ostream& operator<<(std::ostream& os, const BuyStorage& storage)
 }
 
 // Reverse storage iteration
-std::ostream& operator<<(std::ostream& os, const SellStorage& storage)
+static std::ostream& operator<<(std::ostream& os, const SellStorage& storage)
 {
 	os << " SELL" << std::endl;
 	if (!storage.size())
@@ -201,7 +201,7 @@ private:
 	{
 		// side specialization
 		auto& cmp = comparator[side];
-		auto oppo = side ^ 1;
+		Side oppo = side ^ 1;
 		auto& rhs_book = books[oppo];
 		Type type = (lhs.price != 0) ? LIMIT : MARKET;
 

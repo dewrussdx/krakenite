@@ -1,85 +1,72 @@
-#include <iomanip>
-#include <iostream>
-#include "test.h"
+#include "client.h"
 
-#include <iostream>
-#include <winsock2.h>
-
+#if _WIN32
+#include <ws2tcpip.h>
 #pragma comment(lib,"ws2_32.lib") 
-#pragma warning(disable:4996) 
+//#pragma warning(disable:4996) 
+#endif
 
-#define SERVER "127.0.0.1"  // or "localhost" - ip address of UDP server
-#define BUFLEN 512  // max length of answer
-#define PORT 8888  // the port on which to listen for incoming data
-
-int client()
+Client::Client(const char* target, unsigned short port)
+    : _target(target)
+    , _port(port)
+    , _socket(INVALID_SOCKET)
+    , _server({ 0 })
 {
-    // initialise winsock
-    WSADATA ws;
-    if (WSAStartup(MAKEWORD(2, 2), &ws) != 0)
-    {
-        printf("Failed. Error Code: %d", WSAGetLastError());
-        return 1;
-    }
- 
-    // create socket
-    sockaddr_in server;
-    SOCKET client_socket;
-    if ((client_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) // <<< UDP socket
-    {
-        printf("socket() failed with error code: %d", WSAGetLastError());
-        return 2;
-    }
-
-    // setup address structure
-    memset((char*)&server, 0, sizeof(server));
-    server.sin_family = AF_INET;
-    server.sin_port = htons(PORT);
-    server.sin_addr.S_un.S_addr = inet_addr(SERVER);
-
-    // start communication
-    while (true)
-    {
-        char message[BUFLEN];
-        printf("Enter message: ");
-        std::cin.getline(message, BUFLEN);
-
-        // send the message
-        if (sendto(client_socket, message, static_cast<int>(strlen(message)), 
-            0, (sockaddr*)&server, sizeof(sockaddr_in)) == SOCKET_ERROR)
-        {
-            printf("sendto() failed with error code: %d", WSAGetLastError());
-            return 3;
-        }
-
-        // receive a reply and print it
-        // clear the answer by filling null, it might have previously received data
-        char answer[BUFLEN] = {};
-
-        // try to receive some data, this is a blocking call
-        int slen = sizeof(sockaddr_in);
-        int answer_length;
-        if (answer_length = recvfrom(client_socket, answer, BUFLEN, 0, (sockaddr*)&server, &slen) == SOCKET_ERROR)
-        {
-            printf("recvfrom() failed with error code: %d", WSAGetLastError());
-            exit(0);
-        }
-
-        std::cout << answer << "\n";
-    }
-
-    closesocket(client_socket);
+}
+Client::~Client()
+{
+    closesocket(_socket);
     WSACleanup();
 }
 
-// Entry point
-int main(int argc, const char** argv)
+bool Client::init()
 {
-    (void)argc;
-    (void)argv;
+#if _WIN32
+    WSADATA ws;
+    if (WSAStartup(MAKEWORD(2, 2), &ws) != 0)
+    {
+        std::cout << "ERROR: Winsock initialization failed: " << WSAGetLastError() << std::endl;
+        return false;
+    }
+#endif
+    // create socket
+    if ((_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR)
+    {
+        std::cout << "Unable to create socket: " << WSAGetLastError() << std::endl;
+        return false;
+    }
 
-	// set the default precision to two decimal points
-	std::cout << std::fixed << std::setprecision(2) << std::setfill(' ');
-	//auto result = UnitTests("input_trimmed.csv").run();
-	//assert(result);
+    // setup address structure
+    memset(&_server, 0, sizeof(_server));
+    _server.sin_family = AF_INET;
+    _server.sin_port = htons(_port);
+    inet_pton(AF_INET, _target.c_str(), &_server.sin_addr);
+    //_server.sin_addr.S_un.S_addr = inet_addr(_target.c_str());
+    return true;
+}
+
+bool Client::run()
+{
+    // start communication
+    char buffer[1024];
+    while (true)
+    {
+        // send handshake to server
+        if (sendto(_socket, reinterpret_cast<const char*>(& _netio.handshake), sizeof(NetIO::Handshake),
+            0, (sockaddr*)&_server, sizeof(sockaddr_in)) == SOCKET_ERROR)
+        {
+            std::cout << "sendto() failed: " << WSAGetLastError() << std::endl;
+            return false;
+        }
+   
+        int slen = sizeof(sockaddr_in);
+        int msg_size;
+        if ( (msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr*)&_server, &slen)) == SOCKET_ERROR)
+        {
+            std::cout << "recvfrom() failed: " << WSAGetLastError() << std::endl;
+            return false;
+        }
+        std::cout << buffer << std::endl;
+    }
+    return true;
 }
