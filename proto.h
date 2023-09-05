@@ -11,9 +11,9 @@ public:
 
 	struct Callback
 	{
-		virtual void new_order(const NetIO::NewOrder& data) = 0;
-		virtual void cancel_order(const NetIO::CancelOrder& data) = 0;
-		virtual void flush_book(const NetIO::FlushBook& data) = 0;
+		virtual void new_order(const NetIO::NewOrder &data) = 0;
+		virtual void cancel_order(const NetIO::CancelOrder &data) = 0;
+		virtual void flush_book(const NetIO::FlushBook &data) = 0;
 		virtual void protocol_error() = 0;
 	};
 
@@ -21,8 +21,8 @@ public:
 		: _delim(delim)
 	{
 	}
-	
-	void parse(const char* str, size_t size, Callback& _callback)
+
+	void parse(const char *str, size_t size, Callback &_callback)
 	{
 		size_t pos = 0;
 		switch (str[pos++])
@@ -44,8 +44,8 @@ public:
 			NetIO::NewOrder data;
 			data.id = 'N';
 			data.user_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
-			//strncpy_s(& data.symbol[0], sizeof(data.symbol), _tokenize(str, pos, size), sizeof(data.symbol));
-			strcpy(& data.symbol[0], _tokenize(str, pos, size));
+			// strncpy_s(& data.symbol[0], sizeof(data.symbol), _tokenize(str, pos, size), sizeof(data.symbol));
+			strcpy(&data.symbol[0], _tokenize(str, pos, size));
 			data.price = static_cast<Price>(std::stoi(_tokenize(str, pos, size)));
 			data.qty = static_cast<Qty>(std::stoi(_tokenize(str, pos, size)));
 			data.side = _tokenize(str, pos, size)[0];
@@ -72,12 +72,11 @@ public:
 			_callback.protocol_error();
 		}
 		break;
-
 		}
 	}
 
 private:
-	const char* _tokenize(const char* str, size_t& pos, size_t size)
+	const char *_tokenize(const char *str, size_t &pos, size_t size)
 	{
 		size_t cnt = 0;
 		while (pos < size)
@@ -95,7 +94,7 @@ private:
 		}
 		return cnt > 0 ? _token : nullptr;
 	}
-	char _token[_buffer_size] = { 0 };
+	char _token[_buffer_size] = {0};
 	char _delim;
 };
 

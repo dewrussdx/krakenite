@@ -7,13 +7,11 @@
 
 struct StreamHandler : public ProtocolParser::Callback
 {
-	StreamHandler(OrderBookManager& manager)
-		: _manager(manager)
-		, _active_book(nullptr)
+	StreamHandler(OrderBookManager &manager)
+		: _manager(manager), _active_book(nullptr)
 	{
-
 	}
-	virtual void new_order(const NetIO::NewOrder& data)
+	virtual void new_order(const NetIO::NewOrder &data)
 	{
 		if (!_active_book)
 		{
@@ -25,11 +23,11 @@ struct StreamHandler : public ProtocolParser::Callback
 		}
 		else
 		{
-			_active_book->new_order(data.side == 'B' ? BUY : SELL,std::forward<Order>(
-				Order{ data.user_id,data.user_order_id,data.price,0,data.qty }));
+			_active_book->new_order(data.side == 'B' ? BUY : SELL, std::forward<Order>(
+																	   Order{data.user_id, data.user_order_id, data.price, 0, data.qty}));
 		}
 	}
-	virtual void cancel_order(const NetIO::CancelOrder& data)
+	virtual void cancel_order(const NetIO::CancelOrder &data)
 	{
 		if (!_active_book)
 		{
@@ -38,10 +36,10 @@ struct StreamHandler : public ProtocolParser::Callback
 		else
 		{
 			_active_book->cancel_order(std::forward<UserOrder>(
-				UserOrder{ data.user_id,data.user_order_id }));
+				UserOrder{data.user_id, data.user_order_id}));
 		}
 	}
-	virtual void flush_book(const NetIO::FlushBook&)
+	virtual void flush_book(const NetIO::FlushBook &)
 	{
 		if (!_active_book)
 		{
@@ -56,9 +54,10 @@ struct StreamHandler : public ProtocolParser::Callback
 	{
 		std::cout << "ERROR: Protocol error" << std::endl;
 	}
+
 private:
-	OrderBookManager& _manager;
-	OrderBook* _active_book;
+	OrderBookManager &_manager;
+	OrderBook *_active_book;
 };
 
 bool UnitTests::run()
@@ -67,7 +66,7 @@ bool UnitTests::run()
 	OrderBookManager manager;
 	StreamHandler callback(manager);
 
-	const char* inputs[] = {
+	const char *inputs[] = {
 		// 1
 		"N,1,IBM,10,100,B,1",
 		"N,1,IBM,12,100,S,2",
@@ -106,7 +105,7 @@ bool UnitTests::run()
 		"N,2,IBM,11,100,S,102",
 		"N,1,IBM,12,100,B,103",
 		"F",
-	
+
 		// 6
 		"N,1,IBM,10,100,B,1",
 		"N,1,IBM,12,100,S,2",
@@ -114,7 +113,7 @@ bool UnitTests::run()
 		"N,2,IBM,11,100,S,102",
 		"N,2,IBM,0,100,S,103",
 		"F",
-		
+
 		// 7
 		"N,1,IBM,10,100,B,1",
 		"N,1,IBM,12,100,S,2",
@@ -122,7 +121,7 @@ bool UnitTests::run()
 		"N,2,IBM,11,100,S,102",
 		"N,1,IBM,0,100,B,3",
 		"F",
-	
+
 		// 8
 		"N,1,IBM,10,100,B,1",
 		"N,1,IBM,16,100,S,2",
@@ -202,7 +201,7 @@ bool UnitTests::run()
 		"C,2,101",
 		"F",
 	};
-	const char* outputs[] = {
+	const char *outputs[] = {
 		// Scenario 1
 		"A, 1, 1",
 		"B, B, 10, 100",
@@ -258,8 +257,8 @@ bool UnitTests::run()
 		"A, 2, 103",
 		"T, 1, 1, 2, 103, 9, 100",
 		"B, B, 9, 100",
-		
-		// Scenario 5		
+
+		// Scenario 5
 		"A, 1, 1",
 		"B, B, 10, 100",
 		"A, 1, 2",
@@ -331,7 +330,7 @@ bool UnitTests::run()
 		"A, 1, 3",
 		"T, 1, 3, 2, 102, 11, 20",
 		"B, S, 11, 80",
-		
+
 		// Scenario 11
 		"A, 1, 1",
 		"B, B, 10, 100",
@@ -351,11 +350,11 @@ bool UnitTests::run()
 		"B, S, 12, 100",
 		"A, 2, 101",
 		"A, 2, 102",
-		"B, S, 11, 100",	
+		"B, S, 11, 100",
 		"A, 1, 3",
 		"T, 1, 3, 2, 102, 11, 20",
 		"B, S, 11, 80",
-		
+
 		// Scenario 13
 		"A, 1, 1",
 		"B, B, 10, 100",
@@ -387,7 +386,7 @@ bool UnitTests::run()
 		"B, B, 9, 100",
 		"C, 2, 102",
 		"B, S, 12, 100",
-	
+
 		// Scenario 15
 		"A, 1, 1",
 		"B, B, 10, 100",
@@ -415,32 +414,32 @@ bool UnitTests::run()
 	LogPub::instance().start_recording();
 	auto scenario = 1;
 	LogPub::instance().queue_ext("Scenario %d:", scenario);
-	for (size_t i = 0,max = sizeof(inputs) / sizeof(char*); i < max; i++)
+	for (size_t i = 0, max = sizeof(inputs) / sizeof(char *); i < max; i++)
 	{
-		parser.parse(inputs[i],strlen(inputs[i]),callback);
+		parser.parse(inputs[i], strlen(inputs[i]), callback);
 		if (inputs[i][0] == 'F')
-		{	
+		{
 			scenario++;
 			LogPub::instance().queue_ext("Scenario %d:", scenario);
 		}
 	}
-	const std::vector<std::string>& out = LogPub::instance().stop_recording();
-	
-	size_t should_have = sizeof(outputs) / sizeof(char*);
+	const std::vector<std::string> &out = LogPub::instance().stop_recording();
+
+	size_t should_have = sizeof(outputs) / sizeof(char *);
 	size_t actually_have = out.size();
 	std::cout << "Should have: " << should_have << "; Actually have: " << actually_have << std::endl;
 
-	assert(should_have == actually_have);;
+	assert(should_have == actually_have);
+	;
 
 	// validate
 	auto success = 0;
 	auto failure = 0;
 	auto total = 0;
-	for (size_t i = 0, max = sizeof(outputs) / sizeof(char*); i < max && i < out.size(); i++)
+	for (size_t i = 0, max = sizeof(outputs) / sizeof(char *); i < max && i < out.size(); i++)
 	{
 		auto result = out[i].compare(outputs[i]);
-		std::cout << "" << outputs[i] << " : " << out[i] << " -> " <<
-			(result == 0 ? "PASS" : "FAILURE") << std::endl;
+		std::cout << "" << outputs[i] << " : " << out[i] << " -> " << (result == 0 ? "PASS" : "FAILURE") << std::endl;
 		if (result == 0)
 		{
 			success++;

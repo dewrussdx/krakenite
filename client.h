@@ -19,7 +19,7 @@ typedef int SOCKET;
 class Client
 {
 public:
-    Client(const char* target = "127.0.0.1", unsigned short port = 1234);
+    Client(const char *target = "127.0.0.1", unsigned short port = 1234);
     ~Client();
 
     bool init();
@@ -34,4 +34,3 @@ private:
 };
 
 #endif
-

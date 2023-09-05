@@ -17,8 +17,8 @@ class LogPub final
 {
 public:
 	static constexpr size_t _buffer_size = 256;
-	
-	static LogPub& instance()
+
+	static LogPub &instance()
 	{
 		static LogPub _logpub;
 		return _logpub;
@@ -33,33 +33,33 @@ public:
 		_recording_buffer.clear();
 		_recording = true;
 	}
-	const std::vector<std::string>& stop_recording()
+	const std::vector<std::string> &stop_recording()
 	{
 		_flush_queue();
 		_recording = false;
 		return _recording_buffer;
 	}
-	void queue_new_order(const Order& data)
+	void queue_new_order(const Order &data)
 	{
 		snprintf(_buffer, sizeof(_buffer), "A, %d, %d", data.user_id, data.user_order_id);
 		_add(std::forward<std::string>(std::string(_buffer)));
 	}
 
-	void queue_cancel_order(const UserOrder& data)
+	void queue_cancel_order(const UserOrder &data)
 	{
 		snprintf(_buffer, sizeof(_buffer), "C, %d, %d", data.user_id, data.user_order_id);
 		_add(std::forward<std::string>(std::string(_buffer)));
 	}
 
-	void queue_trade(Side side, const Order& lhs, const Order& rhs, Qty qty)
+	void queue_trade(Side side, const Order &lhs, const Order &rhs, Qty qty)
 	{
-		const Order& buyer = (side == BUY) ? lhs : rhs;
-		const Order& seller = (side == BUY) ? rhs : lhs;
+		const Order &buyer = (side == BUY) ? lhs : rhs;
+		const Order &seller = (side == BUY) ? rhs : lhs;
 		snprintf(_buffer, sizeof(_buffer), "T, %d, %d, %d, %d, %d, %d",
-			buyer.user_id, buyer.user_order_id, seller.user_id, seller.user_order_id, seller.price, qty);
+				 buyer.user_id, buyer.user_order_id, seller.user_id, seller.user_order_id, seller.price, qty);
 		_add(std::forward<std::string>(std::string(_buffer)));
 	}
-	void queue_tob_changes(Side side, const TopOfBook& tob)
+	void queue_tob_changes(Side side, const TopOfBook &tob)
 	{
 		char token = (side == BUY) ? 'B' : 'S';
 		if (tob.qty != 0)
@@ -73,8 +73,8 @@ public:
 		}
 		_add(std::forward<std::string>(std::string(_buffer)));
 	}
-	
-	void queue_ext(const char* format, ...)
+
+	void queue_ext(const char *format, ...)
 	{
 		va_list args;
 		va_start(args, format);
@@ -84,16 +84,13 @@ public:
 		std::lock_guard<std::mutex> lock(_mutex);
 		_queue.emplace(std::forward<std::string>(std::string(_buffer)));
 	}
-	
+
 private:
 	LogPub()
-		: _stop(false)
-		, _thread(&LogPub::_process, this)
-		, _recording_buffer(64)
-		, _recording(false)
+		: _stop(false), _thread(&LogPub::_process, this), _recording_buffer(64), _recording(false)
 	{
 	}
-	void _add(std::string&& message)
+	void _add(std::string &&message)
 	{
 		if (_recording)
 		{
@@ -116,12 +113,12 @@ private:
 		std::lock_guard<std::mutex> lock(_mutex);
 		while (!_queue.empty())
 		{
-			std::string& msg = _queue.front();
+			std::string &msg = _queue.front();
 			std::cout << msg << std::endl;
 			_queue.pop();
 		}
 	}
-	char _buffer[_buffer_size] = { 0 };
+	char _buffer[_buffer_size] = {0};
 	std::atomic<bool> _stop;
 	std::queue<std::string> _queue;
 	std::mutex _mutex;

@@ -4,15 +4,12 @@
 
 #if _WIN32
 #include <ws2tcpip.h>
-#pragma comment(lib,"ws2_32.lib") 
-//#pragma warning(disable:4996) 
+#pragma comment(lib, "ws2_32.lib")
+// #pragma warning(disable:4996)
 #endif
 
-Client::Client(const char* target, unsigned short port)
-    : _target(target)
-    , _port(port)
-    , _socket(INVALID_SOCKET)
-    , _server({ 0 })
+Client::Client(const char *target, unsigned short port)
+    : _target(target), _port(port), _socket(INVALID_SOCKET), _server({0})
 {
 }
 Client::~Client()
@@ -59,7 +56,7 @@ bool Client::init()
 bool Client::run()
 {
     OrderBookManager manager;
-    OrderBook* active_book = nullptr;
+    OrderBook *active_book = nullptr;
     char buffer[1024];
 
     NetIO::NewOrder new_order;
@@ -67,8 +64,8 @@ bool Client::run()
     NetIO::FlushBook flush_book;
 
     // send handshake to server
-    if (sendto(_socket, reinterpret_cast<const char*>(&_netio.handshake), sizeof(NetIO::Handshake),
-        0, (sockaddr*)&_server, sizeof(sockaddr_in)) == SOCKET_ERROR)
+    if (sendto(_socket, reinterpret_cast<const char *>(&_netio.handshake), sizeof(NetIO::Handshake),
+               0, (sockaddr *)&_server, sizeof(sockaddr_in)) == SOCKET_ERROR)
     {
 #if _WIN32
         std::cout << "sendto() failed: " << WSAGetLastError() << std::endl;
@@ -87,17 +84,17 @@ bool Client::run()
     LogPub::instance().queue_ext("Scenario: %d", scenario);
     while (!stop)
     {
-        if ((msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr*)&_server, &slen)) == SOCKET_ERROR)
+        if ((msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr *)&_server, &slen)) == SOCKET_ERROR)
         {
 #if _WIN32
             std::cout << "recvfrom() failed: " << WSAGetLastError() << std::endl;
 #else
-        char *error_message = strerror(errno);
-        std::cout << "ERROR: Unable to create socket: " << error_message << std::endl;
+            char *error_message = strerror(errno);
+            std::cout << "ERROR: Unable to create socket: " << error_message << std::endl;
 #endif
             return false;
         }
-    
+
         // unpack scenarios
         if (msg_size > 0)
         {
@@ -107,27 +104,27 @@ bool Client::run()
             case 'N':
             {
                 assert(msg_size == sizeof(NetIO::NewOrder));
-                NetIO::NewOrder* data = reinterpret_cast<NetIO::NewOrder*>(buffer);
+                NetIO::NewOrder *data = reinterpret_cast<NetIO::NewOrder *>(buffer);
                 if (!active_book)
                 {
                     active_book = manager(data->symbol);
                 }
                 assert(active_book);
                 active_book->new_order(data->side == 'B' ? BUY : SELL, std::forward<Order>(
-                    Order{ data->user_id, data->user_order_id, data->price, 0, data->qty }));
+                                                                           Order{data->user_id, data->user_order_id, data->price, 0, data->qty}));
                 break;
             }
-    
+
             case 'C':
             {
                 assert(msg_size == sizeof(NetIO::CancelOrder));
                 assert(active_book);
-                NetIO::CancelOrder* data = reinterpret_cast<NetIO::CancelOrder*>(buffer);
+                NetIO::CancelOrder *data = reinterpret_cast<NetIO::CancelOrder *>(buffer);
                 active_book->cancel_order(std::forward<UserOrder>(
-                    UserOrder{ data->user_id, data->user_order_id }));
+                    UserOrder{data->user_id, data->user_order_id}));
                 break;
             }
-           
+
             case 'F':
             {
                 assert(msg_size == sizeof(NetIO::FlushBook));

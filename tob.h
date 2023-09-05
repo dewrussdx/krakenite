@@ -7,8 +7,7 @@
 struct TopOfBook
 {
 	TopOfBook()
-		: price(0)
-		, qty(0)
+		: price(0), qty(0)
 	{
 	}
 	void flush()

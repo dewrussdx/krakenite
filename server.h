@@ -23,20 +23,20 @@ public:
 
     bool init();
     bool run();
-   
-    void add_protobuf(NetIO::Base* pbuf)
+
+    void add_protobuf(NetIO::Base *pbuf)
     {
         _protobufs.push_back(pbuf);
     }
 
 private:
-    bool _read_csv(const char* path);
+    bool _read_csv(const char *path);
 
     unsigned short _port;
     SOCKET _socket;
     struct sockaddr_in _server;
     struct sockaddr_in _client;
-    std::vector<NetIO::Base*> _protobufs;
+    std::vector<NetIO::Base *> _protobufs;
 };
 
 #endif

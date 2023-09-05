@@ -10,7 +10,7 @@
 struct FileStreamer final
 {
 	static constexpr std::streamsize kDefaultBufferSize = 16;
-	FileStreamer(const std::string& path)
+	FileStreamer(const std::string &path)
 		: handle(path.c_str())
 	{
 	}
@@ -22,7 +22,7 @@ struct FileStreamer final
 	{
 		return handle.good();
 	}
-	bool process(std::function<bool(std::string&& data)> handler)
+	bool process(std::function<bool(std::string &&data)> handler)
 	{
 		if (!handle.is_open())
 		{
@@ -49,8 +49,9 @@ struct FileStreamer final
 	{
 		handle.close();
 	}
+
 private:
-	bool _error(const char* msg)
+	bool _error(const char *msg)
 	{
 		std::cout << msg << std::endl;
 		handle.close();
