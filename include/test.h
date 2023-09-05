@@ -14,6 +14,7 @@ struct UnitTests
 	}
 
 	bool run();
+
 private:
 };
 

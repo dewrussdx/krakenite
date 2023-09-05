@@ -45,7 +45,7 @@ public:
 			data.id = 'N';
 			data.user_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
 #if _WIN32
-			strncpy_s(& data.symbol[0], sizeof(data.symbol), _tokenize(str, pos, size), sizeof(data.symbol));
+			strncpy_s(&data.symbol[0], sizeof(data.symbol), _tokenize(str, pos, size), sizeof(data.symbol));
 #else
 			strcpy(&data.symbol[0], _tokenize(str, pos, size));
 #endif

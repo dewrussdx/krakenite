@@ -310,6 +310,7 @@ struct OrderBookManager final
 		assert(it != _books.end());
 		return (*it).second;
 	}
+
 private:
 	void _clear()
 	{
