@@ -70,7 +70,7 @@ bool Client::run()
 
     int scenario = 1;
     bool stop = false;
-    g_logpub.queue("Scenario: %d", scenario);
+    LogPub::instance().queue_ext("Scenario: %d", scenario);
     while (!stop)
     {
         if ((msg_size = recvfrom(_socket, buffer, sizeof(buffer), 0, (sockaddr*)&_server, &slen)) == SOCKET_ERROR)
@@ -114,7 +114,7 @@ bool Client::run()
                 assert(msg_size == sizeof(NetIO::FlushBook));
                 assert(active_book);
                 active_book->flush();
-                g_logpub.queue("Scenario: %d", ++scenario);
+                LogPub::instance().queue_ext("Scenario: %d", ++scenario);
                 break;
             }
             }

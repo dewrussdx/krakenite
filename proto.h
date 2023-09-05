@@ -34,7 +34,7 @@ public:
 			NetIO::FlushBook data;
 			data.id = 'F';
 			assert(pos >= size);
-			_callback.flush_book(data);
+			_callback.flush_book(std::forward<NetIO::FlushBook>(data));
 		}
 		break;
 
@@ -50,7 +50,7 @@ public:
 			data.side = _tokenize(str, pos, size)[0];
 			data.user_order_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
 			assert(pos >= size);
-			_callback.new_order(data);
+			_callback.new_order(std::forward<NetIO::NewOrder>(data));
 		}
 		break;
 
@@ -62,7 +62,7 @@ public:
 			data.user_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
 			data.user_order_id = static_cast<Uid>(std::stoi(_tokenize(str, pos, size)));
 			assert(pos >= size);
-			_callback.cancel_order(data);
+			_callback.cancel_order(std::forward<NetIO::CancelOrder>(data));
 		}
 		break;
 

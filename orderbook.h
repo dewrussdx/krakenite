@@ -56,7 +56,7 @@ public:
 
 	void add_order(Side side, Order&& order)
 	{
-		g_logpub.queue_new_order(order);
+		LogPub::instance().queue_new_order(order);
 
 		order.epoch = ++uid; // add "timestamp" (FIFO) for price>time ordering
 		history.emplace(std::forward<std::pair<UserOrder, Record>>(std::pair<UserOrder, Record>(
@@ -73,7 +73,7 @@ public:
 			if (order.price == tob.price)
 			{
 				tob.qty += order.qty;
-				g_logpub.queue_tob_changes(side, tob);
+				LogPub::instance().queue_tob_changes(side, tob);
 			}
 			else
 			{
@@ -82,7 +82,7 @@ public:
 				{
 					tob.price = order.price;
 					tob.qty = order.qty;
-					g_logpub.queue_tob_changes(side, tob);
+					LogPub::instance().queue_tob_changes(side, tob);
 				}
 			}
 			books[side].emplace(std::forward<Order>(order));
@@ -128,7 +128,7 @@ public:
 				book.erase(it);
 
 				// publish
-				g_logpub.queue_cancel_order(lhs_user_order);
+				LogPub::instance().queue_cancel_order(lhs_user_order);
 
 				if (tob_change)
 				{
@@ -193,7 +193,7 @@ private:
 			tob.price = price;
 			tob.qty = qty;
 		}
-		g_logpub.queue_tob_changes(side, tob);
+		LogPub::instance().queue_tob_changes(side, tob);
 	}
 
 	bool _match_order(Side side, Order& lhs)
@@ -227,7 +227,7 @@ private:
 				rhs.qty -= qty;
 
 				// Publish trade
-				g_logpub.queue_trade(side, lhs, rhs, qty);
+				LogPub::instance().queue_trade(side, lhs, rhs, qty);
 
 				// Modify TOB
 				assert(rhs.price == tobs[oppo].price);
