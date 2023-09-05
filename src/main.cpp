@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <iostream>
+#include <cstring>
 #include "test.h"
 #include "server.h"
 #include "client.h"

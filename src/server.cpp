@@ -2,7 +2,7 @@
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib") // Winsock Library
 #endif
-
+#include <string.h>
 #include "server.h"
 #include "filestream.h"
 #include "proto.h"

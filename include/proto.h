@@ -1,6 +1,7 @@
 #ifndef _PROTO_H_
 #define _PROTO_H_
 
+#include <cstring>
 #include "orderbook.h"
 #include "netio.h"
 

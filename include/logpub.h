@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cassert>
 #include <cstdarg>
-
+#include <atomic>
 #include "order.h"
 #include "user.h"
 #include "tob.h"

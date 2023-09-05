@@ -1,4 +1,6 @@
 #include <cassert>
+#include <cstring>
+#include <string.h>
 #include "client.h"
 #include "orderbook.h"
 
